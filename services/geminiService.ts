@@ -5,17 +5,14 @@ import {
   TestData,
   SpeakingPartEvaluationResult,
   WritingPartEvaluationResult,
+  TranslationEvaluationResult,
   VocabItem,
 } from "../types";
 import { getRandomVocabularyWords } from "./vocabularyLibrary";
 
-
-
-
-// ✅ Hàm gọi Hugging Face API
-export async function queryHuggingFace(prompt: string) {
+// ✅ Hàm gọi Hugging Face API (đã fix)
+export async function queryHuggingFace(model: string, prompt: string) {
   const HF_API_KEY = import.meta.env.VITE_HF_API_KEY;
-  const model = "mistralai/Mixtral-8x7B-Instruct-v0.1"; // ✅ đảm bảo đúng đường dẫn
 
   const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
     headers: {
@@ -36,11 +33,9 @@ export async function queryHuggingFace(prompt: string) {
   return data[0]?.generated_text || "No response from model";
 }
 
-
-
 // ✅ Ví dụ: Hàm đánh giá Speaking
 export async function evaluateSpeaking(prompt: string): Promise<SpeakingPartEvaluationResult> {
-  const model = "mistralai/Mixtral-8x7B-Instruct-v0.1"; // có thể đổi sang model khác
+  const model = "mistralai/Mixtral-8x7B-Instruct-v0.1";
   const result = await queryHuggingFace(model, `Evaluate the speaking answer: ${prompt}`);
 
   return {
@@ -52,7 +47,7 @@ export async function evaluateSpeaking(prompt: string): Promise<SpeakingPartEval
   };
 }
 
-// ✅ Ví dụ hàm sinh từ vựng ngẫu nhiên
+// ✅ Hàm sinh từ vựng ngẫu nhiên
 export async function getVocabularyExercise(): Promise<VocabItem[]> {
   return getRandomVocabularyWords();
 }
@@ -66,7 +61,10 @@ export async function generateSentenceForTranslation(word: string): Promise<stri
 }
 
 // ✅ Hàm đánh giá bản dịch của học sinh
-export async function evaluateTranslation(userAnswer: string, correctAnswer: string): Promise<TranslationEvaluationResult> {
+export async function evaluateTranslation(
+  userAnswer: string,
+  correctAnswer: string
+): Promise<TranslationEvaluationResult> {
   const model = "mistralai/Mixtral-8x7B-Instruct-v0.1";
   const prompt = `
   Đánh giá bản dịch tiếng Việt của học sinh.
@@ -74,16 +72,4 @@ export async function evaluateTranslation(userAnswer: string, correctAnswer: str
   - Bản dịch của học sinh: ${userAnswer}
   Hãy phản hồi bằng tiếng Việt, gồm:
   1. Điểm chính xác (0–100)
-  2. Nhận xét về ngữ pháp và từ vựng
-  3. Đưa ra bản dịch chuẩn.
-  `;
-
-  const evaluation = await queryHuggingFace(model, prompt);
-
-  return {
-    score: 90,
-    feedback: evaluation,
-    correctTranslation: correctAnswer,
-  };
-}
-
+  2.
