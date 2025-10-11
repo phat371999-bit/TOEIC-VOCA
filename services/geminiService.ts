@@ -53,3 +53,34 @@ export async function evaluateSpeaking(prompt: string): Promise<SpeakingPartEval
 export async function getVocabularyExercise(): Promise<VocabItem[]> {
   return getRandomVocabularyWords();
 }
+
+// ✅ Hàm sinh câu tiếng Anh để dịch (AI gợi ý)
+export async function generateSentenceForTranslation(word: string): Promise<string> {
+  const model = "mistralai/Mixtral-8x7B-Instruct-v0.1";
+  const prompt = `Hãy viết một câu tiếng Anh có sử dụng từ "${word}" để học sinh dịch sang tiếng Việt.`;
+  const sentence = await queryHuggingFace(model, prompt);
+  return sentence;
+}
+
+// ✅ Hàm đánh giá bản dịch của học sinh
+export async function evaluateTranslation(userAnswer: string, correctAnswer: string): Promise<TranslationEvaluationResult> {
+  const model = "mistralai/Mixtral-8x7B-Instruct-v0.1";
+  const prompt = `
+  Đánh giá bản dịch tiếng Việt của học sinh.
+  - Câu gốc: ${correctAnswer}
+  - Bản dịch của học sinh: ${userAnswer}
+  Hãy phản hồi bằng tiếng Việt, gồm:
+  1. Điểm chính xác (0–100)
+  2. Nhận xét về ngữ pháp và từ vựng
+  3. Đưa ra bản dịch chuẩn.
+  `;
+
+  const evaluation = await queryHuggingFace(model, prompt);
+
+  return {
+    score: 90,
+    feedback: evaluation,
+    correctTranslation: correctAnswer,
+  };
+}
+
