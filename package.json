@@ -1,22 +1,17 @@
 {
-  "name": "toeic-voca",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "name": "gemini-proxy-app",
+  "version": "1.0.0",
+  "description": "React + Vite + Express proxy for Google Generative AI",
+  "main": "server/index.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "build": "cd client && npm ci && npm run build",
+    "start": "node server/index.js"
   },
   "dependencies": {
-    "react": "^19.1.1",
-    "@google/genai": "^1.21.0",
-    "react-dom": "^19.1.1"
-  },
-  "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "express": "^4.19.2",
+    "node-fetch": "^3.3.2"
   }
 }
