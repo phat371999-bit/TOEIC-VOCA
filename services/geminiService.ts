@@ -1,6 +1,6 @@
 
 
-import { GoogleGenAI, Type } from "@google/genai";
+
 import { 
     DictationExercise, 
     TestData, 
@@ -23,7 +23,7 @@ import {
 } from '../types';
 import { getRandomVocabularyWords } from './vocabularyLibrary';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const HF_API_KEY = process.env.HF_API_KEY as string;
 
 // Interface for the structured response from the speaking evaluation AI
 export interface SpeakingEvaluationResult {
