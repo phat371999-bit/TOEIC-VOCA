@@ -9,11 +9,13 @@ import {
 } from "../types";
 import { getRandomVocabularyWords } from "./vocabularyLibrary";
 
-// 🚀 Đặt API Key trực tiếp từ biến môi trường Vite (VITE_HF_API_KEY)
-const HF_API_KEY = import.meta.env.VITE_HF_API_KEY;
+
+
 
 // ✅ Hàm gọi Hugging Face API
 export async function queryHuggingFace(model: string, input: string) {
+  const HF_API_KEY = import.meta.env.VITE_HF_API_KEY;
+
   const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
     headers: {
       Authorization: `Bearer ${HF_API_KEY}`,
@@ -24,16 +26,19 @@ export async function queryHuggingFace(model: string, input: string) {
   });
 
   if (!response.ok) {
-    console.error("❌ Hugging Face API error:", response.status);
+    console.error("❌ Hugging Face API error:", response.status, await response.text());
     throw new Error(`Hugging Face API error: ${response.status}`);
   }
 
   const data = await response.json();
+  console.log("✅ Hugging Face response:", data);
+
   if (Array.isArray(data) && data[0]?.generated_text) {
     return data[0].generated_text;
   }
   return JSON.stringify(data);
 }
+
 
 // ✅ Ví dụ: Hàm đánh giá Speaking
 export async function evaluateSpeaking(prompt: string): Promise<SpeakingPartEvaluationResult> {
