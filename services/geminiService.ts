@@ -13,9 +13,9 @@ import { getRandomVocabularyWords } from "./vocabularyLibrary";
 
 
 // ✅ Hàm gọi Hugging Face API
-export async function queryHuggingFace(model: string, input: string) {
+export async function queryHuggingFace(prompt: string) {
   const HF_API_KEY = import.meta.env.VITE_HF_API_KEY;
-  const model = "OuteAI/Llama-OuteTTS-1.0-1B";
+  const model = "mistralai/Mixtral-8x7B-Instruct-v0.1"; // ✅ đảm bảo đúng đường dẫn
 
   const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
     headers: {
@@ -23,7 +23,7 @@ export async function queryHuggingFace(model: string, input: string) {
       "Content-Type": "application/json",
     },
     method: "POST",
-    body: JSON.stringify({ inputs: input }),
+    body: JSON.stringify({ inputs: prompt }),
   });
 
   if (!response.ok) {
@@ -33,12 +33,9 @@ export async function queryHuggingFace(model: string, input: string) {
 
   const data = await response.json();
   console.log("✅ Hugging Face response:", data);
-
-  if (Array.isArray(data) && data[0]?.generated_text) {
-    return data[0].generated_text;
-  }
-  return JSON.stringify(data);
+  return data[0]?.generated_text || "No response from model";
 }
+
 
 
 // ✅ Ví dụ: Hàm đánh giá Speaking
