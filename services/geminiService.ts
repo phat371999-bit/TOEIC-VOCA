@@ -15,7 +15,7 @@ import { getRandomVocabularyWords } from "./vocabularyLibrary";
 // ✅ Hàm gọi Hugging Face API
 export async function queryHuggingFace(model: string, input: string) {
   const HF_API_KEY = import.meta.env.VITE_HF_API_KEY;
-  const model = "tiiuae/falcon-7b-instruct";
+  const model = "OuteAI/Llama-OuteTTS-1.0-1B";
 
   const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
     headers: {
