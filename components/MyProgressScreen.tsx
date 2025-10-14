@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { User, UserProgress, TestResult, ProgressCategory, UserSettings } from '../types';
 import { getProgress, clearProgress } from '../services/progressService';
 import { getSettings } from '../services/settingsService';
-import { PuzzleIcon, TrashIcon, ArrowLeftIcon, TargetIcon, CalendarIcon } from './icons';
+// FIX: Added missing icons for progress categories.
+import { PuzzleIcon, TrashIcon, ArrowLeftIcon, TargetIcon, CalendarIcon, BookOpenIcon, BrainIcon, HeadphoneIcon, MicrophoneIcon, TypeIcon } from './icons';
 import { LoadingIcon } from './icons';
 
 interface MyProgressScreenProps {
@@ -11,8 +13,14 @@ interface MyProgressScreenProps {
     isOwnProgress: boolean;
 }
 
+// FIX: Added missing properties for all ProgressCategory types to satisfy the Record type.
 const categoryInfo: Record<ProgressCategory, { name: string; icon: React.FC<any> }> = {
     vocabulary: { name: 'Vocabulary', icon: PuzzleIcon },
+    reading: { name: 'Reading', icon: BookOpenIcon },
+    grammar: { name: 'Grammar', icon: BrainIcon },
+    listening: { name: 'Listening', icon: HeadphoneIcon },
+    speaking: { name: 'Speaking', icon: MicrophoneIcon },
+    writing: { name: 'Writing', icon: TypeIcon },
 };
 
 const ResultRow: React.FC<{ result: TestResult }> = ({ result }) => {
@@ -110,7 +118,8 @@ const MyProgressScreen: React.FC<MyProgressScreenProps> = ({ viewingUser, onBack
         );
     }
 
-    const allCategories: ProgressCategory[] = ['vocabulary'];
+    // FIX: Included all categories to be rendered.
+    const allCategories: ProgressCategory[] = ['vocabulary', 'reading', 'grammar', 'listening', 'speaking', 'writing'];
     
     const formatDate = (dateString: string | undefined) => {
         if (!dateString) return 'Not Set';

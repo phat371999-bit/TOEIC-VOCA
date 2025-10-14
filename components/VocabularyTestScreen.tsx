@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { VocabularyTest, VocabItem, TranslationEvaluationResult } from '../types';
+import { VocabularyTest, VocabItem } from '../types';
 import { updateWordSrsLevel } from '../services/vocabularyService';
-import { generateSentenceForTranslation, evaluateTranslation } from '../services/geminiService';
-import { BookOpenIcon, BrainIcon, ShuffleIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, XCircleIcon, GridIcon, PuzzleIcon, TypeIcon, LightBulbIcon, HeadphoneIcon, TargetIcon, LinkIcon, FlipIcon, SparklesIcon, LoadingIcon, RefreshIcon, QuestionMarkCircleIcon } from './icons';
+import { BookOpenIcon, BrainIcon, ShuffleIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, XCircleIcon, GridIcon, PuzzleIcon, TypeIcon, LightBulbIcon, HeadphoneIcon, TargetIcon, LinkIcon, FlipIcon, LoadingIcon, RefreshIcon } from './icons';
 import AudioPlayer from './AudioPlayer';
 
-type StudyMode = 'flashcards' | 'quiz' | 'matching_game' | 'scrambler' | 'spelling_recall' | 'audio_dictation' | 'definition_match' | 'listening_translation';
+type StudyMode = 'flashcards' | 'quiz' | 'matching_game' | 'scrambler' | 'spelling_recall' | 'audio_dictation' | 'definition_match';
 
 interface QuizQuestion {
     questionText: string; // The definition
@@ -45,23 +44,6 @@ type MatchingItem = { item: VocabItem; type: 'word' | 'definition' };
 
 const WORDS_PER_DMATCH_TURN = 8;
 type DMatchItemType = { item: VocabItem; type: 'word' | 'definition' };
-
-const HintBox: React.FC<{onClose: () => void}> = ({onClose}) => (
-    <div className="bg-blue-50 dark:bg-slate-800/50 border-l-4 border-blue-500 text-blue-800 dark:text-blue-300 p-4 rounded-r-lg mb-6 relative">
-        <div className="flex">
-            <div className="flex-shrink-0">
-                <LightBulbIcon className="h-6 w-6 text-blue-500" />
-            </div>
-            <div className="ml-3">
-                <h3 className="text-lg font-bold">Pro Tip: Listen & Translate</h3>
-                <p className="text-sm mt-1">Listen to the sentence multiple times to catch the rhythm and key words. Translate the meaning, not just word-for-word. It's okay if your translation isn't perfect; the AI will give you feedback on grammar and vocabulary choice.</p>
-            </div>
-        </div>
-        <button onClick={onClose} className="absolute top-2 right-2 p-1 rounded-full hover:bg-blue-100 dark:hover:bg-slate-700" aria-label="Close hint">
-            <XCircleIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-        </button>
-    </div>
-);
 
 
 const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => void }> = ({ testData, onBack }) => {
@@ -123,15 +105,6 @@ const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => v
     const [incorrectDMatchPair, setIncorrectDMatchPair] = useState<string[] | null>(null); // [word, definition]
     const [isDMatchGameFinished, setIsDMatchGameFinished] = useState(false);
     const [isDMatchTurnFinished, setIsDMatchTurnFinished] = useState(false);
-
-    // State for Listening & Translation
-    type ListeningTranslationState = 'generating' | 'answering' | 'evaluating' | 'result';
-    const [ltState, setLtState] = useState<ListeningTranslationState>('generating');
-    const [ltError, setLtError] = useState<string | null>(null);
-    const [originalSentence, setOriginalSentence] = useState<string>('');
-    const [userTranslation, setUserTranslation] = useState<string>('');
-    const [ltEvaluation, setLtEvaluation] = useState<TranslationEvaluationResult | null>(null);
-    const [showLtHint, setShowLtHint] = useState(true);
 
     const generateQuizQuestions = useCallback(() => {
         const shuffledWords = shuffleArray(wordsForSession);
@@ -294,27 +267,6 @@ const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => v
         setupDMatchTurn(shuffledDeck, 0);
     }, [wordsForSession, setupDMatchTurn]);
     
-    const generateNewLtExercise = useCallback(async () => {
-        setLtState('generating');
-        setLtError(null);
-        setUserTranslation('');
-        setLtEvaluation(null);
-        setShowLtHint(true);
-        try {
-            const sentence = await generateSentenceForTranslation(wordsForSession);
-            if (sentence) {
-                setOriginalSentence(sentence);
-                setLtState('answering');
-            } else {
-                throw new Error("Failed to generate a sentence.");
-            }
-        } catch (err) {
-            console.error(err);
-            setLtError("Could not generate a new exercise. Please try again.");
-            setLtState('answering');
-        }
-    }, [wordsForSession]);
-
     useEffect(() => {
         setDeck(wordsForSession);
         setCurrentCardIndex(0);
@@ -325,8 +277,7 @@ const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => v
         if (mode === 'spelling_recall') startSpellingGame();
         if (mode === 'audio_dictation') startAudioDictationGame();
         if (mode === 'definition_match') startDMatchGame();
-        if (mode === 'listening_translation') generateNewLtExercise();
-    }, [mode, wordsForSession, startQuizSession, startMatchingGame, startScramblerGame, startSpellingGame, startAudioDictationGame, startDMatchGame, generateNewLtExercise]);
+    }, [mode, wordsForSession, startQuizSession, startMatchingGame, startScramblerGame, startSpellingGame, startAudioDictationGame, startDMatchGame]);
     
     const handleWordPractice = useCallback((word: VocabItem, performance: 'good' | 'hard') => {
         const wordId = word.word.toLowerCase();
@@ -530,27 +481,6 @@ const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => v
         }
     };
 
-    const handleLtSubmit = async () => {
-        if (!userTranslation.trim()) {
-            setLtError("Please enter your translation.");
-            return;
-        }
-        setLtState('evaluating');
-        setLtError(null);
-        try {
-            const result = await evaluateTranslation(originalSentence, userTranslation);
-            if (result) {
-                setLtEvaluation(result);
-                setLtState('result');
-            } else {
-                throw new Error("Received an invalid evaluation from the AI.");
-            }
-        } catch (err) {
-             console.error(err);
-             setLtError("Sorry, an error occurred during evaluation. Please try again.");
-             setLtState('answering');
-        }
-    };
     
     
     // RENDER FUNCTIONS FOR EACH MODE
@@ -954,106 +884,6 @@ const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => v
             </div>
         );
     };
-    
-    const renderListeningTranslation = () => {
-        switch (ltState) {
-            case 'generating':
-                return (
-                    <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-800 rounded-xl shadow-lg">
-                        <LoadingIcon className="h-12 w-12 text-blue-600 animate-spin" />
-                        <h3 className="mt-6 text-xl font-semibold text-slate-700 dark:text-slate-200">Generating New Exercise...</h3>
-                        <p className="mt-2 text-slate-500 dark:text-slate-400">The AI is creating a sentence using words from this set.</p>
-                    </div>
-                );
-
-            case 'answering':
-            case 'evaluating':
-                return (
-                    <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
-                        <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 text-center mb-2">Listen and Translate</h3>
-                        <p className="text-slate-600 dark:text-slate-400 text-center mb-6">Listen to the English sentence, then type your Vietnamese translation below.</p>
-                        {showLtHint && <HintBox onClose={() => setShowLtHint(false)} />}
-                        <div className="mb-6">
-                            <AudioPlayer audioScript={originalSentence} />
-                        </div>
-                        <textarea
-                            value={userTranslation}
-                            onChange={(e) => setUserTranslation(e.target.value)}
-                            className="w-full h-40 p-4 border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50 dark:bg-slate-700 dark:text-white"
-                            placeholder="Nhập bản dịch tiếng Việt của bạn ở đây..."
-                            disabled={ltState === 'evaluating'}
-                        />
-                        {ltError && <p className="text-red-500 text-center mt-4 font-semibold">{ltError}</p>}
-                        <div className="mt-6 flex flex-col-reverse sm:flex-row gap-4">
-                            <button
-                                onClick={generateNewLtExercise}
-                                className="w-full sm:w-auto flex items-center justify-center gap-2 py-3 px-5 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 transition-colors disabled:opacity-50"
-                                disabled={ltState === 'evaluating'}
-                                aria-label="Get a new sentence"
-                            >
-                                <RefreshIcon className="h-5 w-5" />
-                                <span>New Sentence</span>
-                            </button>
-                            <button
-                                onClick={handleLtSubmit}
-                                className="w-full flex-grow flex items-center justify-center gap-2 py-4 px-6 bg-blue-600 text-white font-bold text-lg rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300"
-                                disabled={ltState === 'evaluating'}
-                            >
-                                {ltState === 'evaluating' ? (
-                                    <><LoadingIcon className="h-6 w-6 animate-spin" /><span>Evaluating...</span></>
-                                ) : (
-                                    "Submit for AI Evaluation"
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                );
-
-            case 'result':
-                if (!ltEvaluation) return null;
-                const getScoreColor = (score: number) => {
-                    if (score >= 90) return 'text-green-500';
-                    if (score >= 70) return 'text-blue-500';
-                    if (score >= 50) return 'text-yellow-500';
-                    return 'text-red-500';
-                };
-                return (
-                    <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
-                        <h3 className="text-3xl font-bold text-slate-800 dark:text-slate-100 text-center mb-6">Kết quả đánh giá</h3>
-                        <div className="text-center bg-slate-100 dark:bg-slate-700/50 p-6 rounded-lg mb-6">
-                            <p className="text-lg font-semibold text-slate-700 dark:text-slate-300">Điểm của bạn</p>
-                            <p className={`text-7xl font-bold my-2 ${getScoreColor(ltEvaluation.score)}`}>{ltEvaluation.score}%</p>
-                        </div>
-                        <div className="bg-slate-100 dark:bg-slate-700/50 p-4 rounded-lg mb-6">
-                            <h4 className="font-bold text-slate-800 dark:text-slate-200">Nhận xét từ AI:</h4>
-                            <p className="text-slate-600 dark:text-slate-300 mt-1 italic">{ltEvaluation.feedback_vi}</p>
-                        </div>
-                        <div className="space-y-4">
-                            <div>
-                                <h4 className="font-semibold text-slate-500 dark:text-slate-400">Câu gốc (Tiếng Anh):</h4>
-                                <p className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-md text-slate-800 dark:text-slate-200">{originalSentence}</p>
-                            </div>
-                             <div>
-                                <h4 className="font-semibold text-slate-500 dark:text-slate-400">Bản dịch của bạn (Tiếng Việt):</h4>
-                                <p className="p-3 bg-slate-50 dark:bg-slate-900/50 rounded-md text-slate-800 dark:text-slate-200">{userTranslation}</p>
-                            </div>
-                        </div>
-                        <div className="mt-8">
-                             <button
-                                onClick={generateNewLtExercise}
-                                className="w-full flex items-center justify-center gap-2 py-4 px-6 bg-blue-600 text-white font-bold text-lg rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                                <RefreshIcon className="h-6 w-6" />
-                                Next Exercise
-                            </button>
-                        </div>
-                    </div>
-                );
-            default:
-                return null;
-        }
-    };
-
 
     const renderContent = () => {
         switch (mode) {
@@ -1064,7 +894,6 @@ const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => v
             case 'spelling_recall': return renderSpellingRecall();
             case 'audio_dictation': return renderAudioDictation();
             case 'definition_match': return renderDefinitionMatch();
-            case 'listening_translation': return renderListeningTranslation();
             default:
                 return renderFlashcards();
         }
@@ -1078,7 +907,6 @@ const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => v
         { id: 'scrambler', name: 'Scrambler', icon: PuzzleIcon },
         { id: 'spelling_recall', name: 'Spelling Recall', icon: TypeIcon },
         { id: 'audio_dictation', name: 'Audio Dictation', icon: HeadphoneIcon },
-        { id: 'listening_translation', name: 'Listen & Translate (AI)', icon: SparklesIcon },
     ];
 
     return (
@@ -1087,11 +915,6 @@ const VocabularyTestScreen: React.FC<{ testData: VocabularyTest, onBack: () => v
                 <div className="fixed bottom-5 right-5 bg-slate-800 text-white px-6 py-3 rounded-lg shadow-xl z-50 animate-bounce">
                     {toastMessage}
                 </div>
-            )}
-             {!showLtHint && mode === 'listening_translation' && (ltState === 'answering' || ltState === 'evaluating') && (
-                <button onClick={() => setShowLtHint(true)} className="fixed top-24 right-4 z-50 p-2 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700" aria-label="Show hint">
-                    <QuestionMarkCircleIcon className="h-6 w-6" />
-                </button>
             )}
             <div className="max-w-5xl mx-auto">
                 <button onClick={onBack} className="mb-6 inline-flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-semibold transition-colors">
