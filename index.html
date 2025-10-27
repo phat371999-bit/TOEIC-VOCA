@@ -12,6 +12,27 @@
       }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @keyframes shine {
+        0% { transform: translateX(-100%) skewX(-30deg); }
+        100% { transform: translateX(200%) skewX(-30deg); }
+      }
+      .shine::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 50%;
+        height: 100%;
+        background: linear-gradient(
+          to right,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(255, 255, 255, 0.3) 50%,
+          rgba(255, 255, 255, 0) 100%
+        );
+        animation: shine 4s infinite linear;
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {

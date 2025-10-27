@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { 
     DictationExercise, 
@@ -19,14 +20,12 @@ import {
     WritingPart3EvaluationResult, 
     DeterminerExercise,
     TranslationEvaluationResult,
-    VocabItem
+    VocabItem,
+    WordPronunciationEvaluationResult
 } from '../types';
 import { getRandomVocabularyWords } from './vocabularyLibrary';
 
-const ai = new GoogleGenAI({
-  apiKey: import.meta.env.VITE_GOOGLE_API_KEY
-});
-
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
 // Interface for the structured response from the speaking evaluation AI
 export interface SpeakingEvaluationResult {
@@ -410,6 +409,105 @@ export const getWordDefinition = async (word: string, contextSentence: string = 
     } catch (error) {
         console.error(`Error generating definition for "${word}":`, error);
         return "Could not retrieve definition at this time.";
+    }
+};
+
+const wordWithPhoneticSchema = {
+    type: Type.ARRAY,
+    items: {
+        type: Type.OBJECT,
+        properties: {
+            word: { type: Type.STRING, description: "A common English word suitable for B1-B2 level pronunciation practice." },
+            phonetic: { type: Type.STRING, description: "The word's International Phonetic Alphabet (IPA) transcription in American English." }
+        },
+        required: ['word', 'phonetic']
+    }
+};
+
+export const generateRandomWordsWithPhonetics = async (count: number): Promise<{ word: string; phonetic: string; }[] | null> => {
+    try {
+        const prompt = `Generate a JSON array of ${count} common English words for pronunciation practice (B1-B2 level). Provide each word and its American English IPA transcription. The words should cover a variety of different phonemes.`;
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: wordWithPhoneticSchema,
+            },
+        });
+
+        const jsonStr = response.text.trim();
+        const data = JSON.parse(jsonStr);
+        if (data && Array.isArray(data) && data.length === count) {
+            return data;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error generating random words with phonetics:", error);
+        throw new Error("Failed to generate words from API.");
+    }
+};
+
+const phonemeEvaluationSchema = {
+    type: Type.OBJECT,
+    properties: {
+        phoneme: { type: Type.STRING, description: "A single phoneme from the IPA transcription." },
+        accuracyScore: { type: Type.NUMBER, description: "An accuracy score from 0.0 to 1.0 for this specific phoneme." }
+    },
+    required: ['phoneme', 'accuracyScore']
+};
+
+const pronunciationEvaluationSchema = {
+    type: Type.OBJECT,
+    properties: {
+        word: { type: Type.STRING, description: "The original word being evaluated." },
+        phonetic: { type: Type.STRING, description: "The original IPA transcription." },
+        overallScore: { type: Type.INTEGER, description: "An overall score from 0 to 100 for the pronunciation of the entire word." },
+        phonemeEvaluations: {
+            type: Type.ARRAY,
+            description: "A breakdown of accuracy for each phoneme.",
+            items: phonemeEvaluationSchema
+        },
+        feedback_vi: { type: Type.STRING, description: "Concise, helpful feedback in Vietnamese, pointing out specific phonemes to improve if necessary. Example: 'Âm /s/ của bạn hơi giống /z/. Hãy thử đặt lưỡi gần răng hơn.'" }
+    },
+    required: ['word', 'phonetic', 'overallScore', 'phonemeEvaluations', 'feedback_vi']
+};
+
+export const evaluateWordPronunciation = async (word: string, phonetic: string, audioBase64: string, mimeType: string): Promise<WordPronunciationEvaluationResult | null> => {
+    try {
+        const systemInstruction = `You are an expert American English pronunciation evaluator. You will be provided with an English word, its IPA transcription, and an audio file of a user pronouncing it. Your task is to analyze the audio and provide a detailed evaluation in JSON format according to the schema.
+1.  Provide an overall score from 0 to 100.
+2.  Break down the IPA transcription into individual phonemes and provide an accuracy score from 0.0 to 1.0 for each one.
+3.  Provide concise, helpful feedback in Vietnamese, identifying specific phonemes that need improvement.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: {
+                parts: [
+                    { text: `Evaluate my pronunciation of the word "${word}", which has the IPA transcription "${phonetic}".` },
+                    { inlineData: { mimeType: mimeType, data: audioBase64 } }
+                ]
+            },
+            config: {
+                systemInstruction: systemInstruction,
+                responseMimeType: "application/json",
+                responseSchema: pronunciationEvaluationSchema,
+            },
+        });
+
+        const jsonStr = response.text.trim();
+        const data = JSON.parse(jsonStr);
+
+        if (data && typeof data.overallScore === 'number') {
+            return data as WordPronunciationEvaluationResult;
+        }
+
+        return null;
+
+    } catch (error) {
+        console.error(`Error evaluating pronunciation for "${word}":`, error);
+        throw new Error("Failed to get pronunciation evaluation from API.");
     }
 };
 

@@ -4,6 +4,8 @@ import VocabularyScreen from './components/VocabularyScreen';
 import VocabularyPartScreen from './components/VocabularyPartScreen';
 import VocabularyTestScreen from './components/VocabularyTestScreen';
 import StatsFooter from './components/StatsFooter';
+import PronunciationHub from './components/PronunciationHub';
+import PronunciationPracticeScreen from './components/PronunciationPracticeScreen';
 import { AppState, VocabularyTest, VocabularyPart } from './types';
 import { getVocabularyPart, getVocabularyTest } from './services/vocabularyLibrary';
 import { LogoIcon } from './components/icons';
@@ -15,9 +17,13 @@ const App: React.FC = () => {
   const [selectedVocabularyPart, setSelectedVocabularyPart] = useState<VocabularyPart | null>(null);
   const [selectedVocabularyTest, setSelectedVocabularyTest] = useState<VocabularyTest | null>(null);
 
+  // Pronunciation State
+  const [pronunciationMode, setPronunciationMode] = useState<'word' | 'sentence' | 'paragraph' | null>(null);
+
   const handleGoHome = useCallback(() => {
     setSelectedVocabularyPart(null);
     setSelectedVocabularyTest(null);
+    setPronunciationMode(null);
     setAppState(AppState.PracticeHub);
   }, []);
   
@@ -46,9 +52,28 @@ const App: React.FC = () => {
 
     const handleNavigateToVocabulary = useCallback(() => setAppState(AppState.VocabularyHome), []);
 
+    // Pronunciation Handlers
+    const handleNavigateToPronunciation = useCallback(() => setAppState(AppState.PronunciationHub), []);
+
+    const handleSelectPronunciationMode = useCallback((mode: 'word' | 'sentence' | 'paragraph') => {
+        if (mode === 'word') {
+            setPronunciationMode(mode);
+            setAppState(AppState.PronunciationPractice);
+        } else {
+            alert('This mode is coming soon!');
+        }
+    }, []);
+
+    const handleBackToPronunciationHub = useCallback(() => {
+        setPronunciationMode(null);
+        setAppState(AppState.PronunciationHub);
+    }, []);
+
+
     const renderContent = () => {
         const practiceHubProps = {
             onNavigateToVocabulary: handleNavigateToVocabulary,
+            onNavigateToPronunciation: handleNavigateToPronunciation,
         };
         switch (appState) {
             case AppState.PracticeHub:
@@ -61,6 +86,13 @@ const App: React.FC = () => {
             case AppState.VocabularyTest:
                 if (!selectedVocabularyTest) return null;
                 return <VocabularyTestScreen testData={selectedVocabularyTest} onBack={handleBackToVocabularyPartHome} />;
+            case AppState.PronunciationHub:
+                return <PronunciationHub onSelectMode={handleSelectPronunciationMode} />;
+            case AppState.PronunciationPractice:
+                 if (pronunciationMode === 'word') {
+                    return <PronunciationPracticeScreen mode={pronunciationMode} onBack={handleBackToPronunciationHub} />;
+                }
+                return <PronunciationHub onSelectMode={handleSelectPronunciationMode} />;
             default:
                 return <PracticeHub {...practiceHubProps} />;
         }

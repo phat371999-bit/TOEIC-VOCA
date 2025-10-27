@@ -2,6 +2,7 @@
 
 
 
+
 export interface User {
     username: string;
     password?: string;
@@ -12,6 +13,8 @@ export enum AppState {
     VocabularyHome = 'VOCABULARY_HOME',
     VocabularyPartHome = 'VOCABULARY_PART_HOME',
     VocabularyTest = 'VOCABULARY_TEST',
+    PronunciationHub = 'PRONUNCIATION_HUB',
+    PronunciationPractice = 'PRONUNCIATION_PRACTICE',
 }
 
 // For Listening & Translation (within Vocabulary)
@@ -163,6 +166,21 @@ export interface SpeakingPart1EvaluationResult {
         examples: string[];
     };
 }
+
+// For Pronunciation Practice
+export interface PhonemeEvaluation {
+    phoneme: string;
+    accuracyScore: number; // 0.0 to 1.0
+}
+
+export interface WordPronunciationEvaluationResult {
+    word: string;
+    phonetic: string;
+    overallScore: number; // 0 to 100
+    phonemeEvaluations: PhonemeEvaluation[];
+    feedback_vi: string;
+}
+
 
 export interface SpeakingPart2EvaluationResult {
     taskScore: number;
